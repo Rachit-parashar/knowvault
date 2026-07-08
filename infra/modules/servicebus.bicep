@@ -2,13 +2,17 @@ param baseName string
 param location string
 param tags object
 
+@description('Basic (~$0.05/M ops, queues + DLQ only) suffices until topics are needed; Standard is ~$10/month.')
+@allowed(['Basic', 'Standard'])
+param sku string = 'Basic'
+
 resource namespace 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
   name: 'sb-${baseName}-${uniqueString(resourceGroup().id)}'
   location: location
   tags: tags
   sku: {
-    name: 'Standard' // queues + DLQ; Standard needed for topics later
-    tier: 'Standard'
+    name: sku
+    tier: sku
   }
   properties: {
     minimumTlsVersion: '1.2'

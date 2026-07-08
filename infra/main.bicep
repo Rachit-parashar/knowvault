@@ -14,6 +14,14 @@ param sqlAdminLogin string = 'knowvaultadmin'
 @description('SQL admin password. Pass at deploy time; stored in Key Vault by the module.')
 param sqlAdminPassword string
 
+@description('AI Search tier: free for early development, basic from Phase 2 (semantic reranker).')
+@allowed(['free', 'basic'])
+param searchSku string = 'free'
+
+@description('Service Bus tier: Basic until topics are needed.')
+@allowed(['Basic', 'Standard'])
+param serviceBusSku string = 'Basic'
+
 var baseName = 'knowvault-${environmentName}'
 var tags = {
   project: 'knowvault'
@@ -87,6 +95,7 @@ module serviceBus 'modules/servicebus.bicep' = {
     baseName: baseName
     location: location
     tags: tags
+    sku: serviceBusSku
   }
 }
 
@@ -107,6 +116,7 @@ module search 'modules/search.bicep' = {
     baseName: baseName
     location: location
     tags: tags
+    sku: searchSku
   }
 }
 
