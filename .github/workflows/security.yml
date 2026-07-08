@@ -5,15 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '30 4 * * 1' # weekly, Monday 04:30 UTC
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
+  # CodeQL and dependency review need GitHub Advanced Security on private
+  # repos; both activate automatically once the repo is made public.
   codeql:
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +27,7 @@ jobs:
       - uses: github/codeql-action/analyze@v3
 
   dependency-review:
-    if: github.event_name == 'pull_request'
+    if: ${{ github.event_name == 'pull_request' && !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
