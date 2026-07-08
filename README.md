@@ -44,6 +44,7 @@ Key platform choices and their rationale live in [docs/adr](docs/adr/):
 - [ADR-001 — Compute: Azure Container Apps](docs/adr/ADR-001-compute-choice.md)
 - [ADR-002 — ACL strategy: denormalized ACLs + query-time trimming](docs/adr/ADR-002-acl-strategy.md)
 - [ADR-003 — Monorepo](docs/adr/ADR-003-monorepo.md)
+- [ADR-004 — LLM model selection and version pinning](docs/adr/ADR-004-model-selection.md)
 
 ## Local development
 

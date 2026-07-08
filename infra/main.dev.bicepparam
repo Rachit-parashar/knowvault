@@ -1,7 +1,9 @@
 using 'main.bicep'
 
 param environmentName = 'dev'
-param location = 'eastus2'
+// southeastasia: closest region to the team with full model availability;
+// eastus2 rejects new-subscription SQL/Search provisioning (capacity limits).
+param location = 'southeastasia'
 param sqlAdminLogin = 'knowvaultadmin'
 // Cost-minimized dev tiers: AI Search free (no semantic reranker until
 // Phase 2), Service Bus Basic (queues + DLQ only). Only ACR (~$5/month)

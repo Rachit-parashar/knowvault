@@ -22,6 +22,9 @@ param searchSku string = 'free'
 @allowed(['Basic', 'Standard'])
 param serviceBusSku string = 'Basic'
 
+@description('Azure OpenAI can be blocked on brand-new subscriptions (error 715-123420, clears within ~a day). Disable to deploy everything else.')
+param deployOpenAi bool = true
+
 var baseName = 'knowvault-${environmentName}'
 var tags = {
   project: 'knowvault'
@@ -130,7 +133,7 @@ module cosmos 'modules/cosmos.bicep' = {
   }
 }
 
-module openai 'modules/openai.bicep' = {
+module openai 'modules/openai.bicep' = if (deployOpenAi) {
   scope: rg
   name: 'openai'
   params: {
@@ -161,4 +164,4 @@ output serviceBusNamespace string = serviceBus.outputs.namespaceName
 output storageAccountName string = storage.outputs.accountName
 output searchEndpoint string = search.outputs.searchEndpoint
 output cosmosEndpoint string = cosmos.outputs.accountEndpoint
-output openAiEndpoint string = openai.outputs.endpoint
+output openAiEndpoint string = deployOpenAi ? openai!.outputs.endpoint : ''
