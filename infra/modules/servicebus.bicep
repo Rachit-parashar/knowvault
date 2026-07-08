@@ -38,3 +38,4 @@ resource deleteQueue 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-preview'
 }
 
 output namespaceName string = namespace.name
+output documentChangedQueueId string = ingestQueue.id
