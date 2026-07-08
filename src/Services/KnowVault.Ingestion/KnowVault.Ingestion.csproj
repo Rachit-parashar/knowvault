@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-KnowVault.Ingestion-e714f81a-7427-41b2-bbc4-2d21f00364a2</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\KnowVault.ServiceDefaults\KnowVault.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Shared\KnowVault.Contracts\KnowVault.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\KnowVault.Domain\KnowVault.Domain.csproj" />
+  </ItemGroup>
+</Project>

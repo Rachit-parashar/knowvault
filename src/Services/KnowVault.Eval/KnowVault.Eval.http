@@ -1,0 +1,6 @@
+@KnowVault.Eval_HostAddress = http://localhost:5029
+
+GET {{KnowVault.Eval_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

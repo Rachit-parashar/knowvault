@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KnowVault.AppHost/KnowVault.AppHost.csproj" />
+    <Project Path="src/KnowVault.ServiceDefaults/KnowVault.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/">
+    <Project Path="src/Services/KnowVault.Admin/KnowVault.Admin.csproj" />
+    <Project Path="src/Services/KnowVault.Answer/KnowVault.Answer.csproj" />
+    <Project Path="src/Services/KnowVault.Connector/KnowVault.Connector.csproj" />
+    <Project Path="src/Services/KnowVault.Eval/KnowVault.Eval.csproj" />
+    <Project Path="src/Services/KnowVault.Gateway/KnowVault.Gateway.csproj" />
+    <Project Path="src/Services/KnowVault.Ingestion/KnowVault.Ingestion.csproj" />
+    <Project Path="src/Services/KnowVault.Query/KnowVault.Query.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/KnowVault.Contracts/KnowVault.Contracts.csproj" />
+    <Project Path="src/Shared/KnowVault.Domain/KnowVault.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KnowVault.Domain.Tests/KnowVault.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
