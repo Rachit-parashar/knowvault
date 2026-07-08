@@ -1,0 +1,53 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write # OIDC federated credentials to Azure — no publish-profile secrets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build and test
+        run: |
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+          dotnet test --no-build --configuration Release
+
+  deploy-infra:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    # Enable once AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID
+    # federated-credential secrets are configured in the repo.
+    if: ${{ vars.AZURE_DEPLOY_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep (staging)
+        run: |
+          az deployment sub create \
+            --name knowvault-staging-${{ github.run_id }} \
+            --location eastus2 \
+            --template-file infra/main.bicep \
+            --parameters infra/main.dev.bicepparam \
+            --parameters environmentName=staging sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}"
+
+  # Later phases add: push images to ACR → deploy → smoke tests + full eval run
+  # → manual approval → prod → Container Apps revision shift 10% → 100%.
