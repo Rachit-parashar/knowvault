@@ -11,14 +11,17 @@ public static class MessageContracts
     public const string DocumentDeletedV1 = "knowvault.document-deleted.v1";
 }
 
-/// <summary>Emitted by Connector when a document is created or its content hash changes.</summary>
+/// <summary>Emitted when a document is created or its content changes (Connector sync or direct upload).</summary>
+/// <param name="BlobPath">Where the raw content sits in the uploads container; set for direct-upload documents.</param>
+/// <param name="ContentHash">SHA-256 of the content when the producer already knows it; Ingestion computes it otherwise.</param>
 public sealed record DocumentChanged(
     string TenantId,
     string SourceId,
     string DocumentId,
-    string ContentHash,
     string SourceType,
+    string? BlobPath,
     string? SourceUrl,
+    string? ContentHash,
     IReadOnlyList<string> AllowedPrincipals,
     DateTimeOffset DetectedAt);
 

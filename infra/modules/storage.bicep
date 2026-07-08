@@ -33,3 +33,4 @@ resource uploads 'Microsoft.Storage/storageAccounts/blobServices/containers@2023
 }
 
 output accountName string = account.name
+output accountId string = account.id

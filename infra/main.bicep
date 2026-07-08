@@ -100,6 +100,48 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
+module search 'modules/search.bicep' = {
+  scope: rg
+  name: 'search'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+  }
+}
+
+module cosmos 'modules/cosmos.bicep' = {
+  scope: rg
+  name: 'cosmos'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+  }
+}
+
+module openai 'modules/openai.bicep' = {
+  scope: rg
+  name: 'openai'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+  }
+}
+
+module eventGrid 'modules/eventgrid.bicep' = {
+  scope: rg
+  name: 'eventgrid'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+    storageAccountId: storage.outputs.accountId
+    documentChangedQueueId: serviceBus.outputs.documentChangedQueueId
+  }
+}
+
 output resourceGroupName string = rg.name
 output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
 output containerRegistryLoginServer string = registry.outputs.loginServer
@@ -107,3 +149,6 @@ output appInsightsConnectionString string = monitoring.outputs.appInsightsConnec
 output keyVaultUri string = keyVault.outputs.vaultUri
 output serviceBusNamespace string = serviceBus.outputs.namespaceName
 output storageAccountName string = storage.outputs.accountName
+output searchEndpoint string = search.outputs.searchEndpoint
+output cosmosEndpoint string = cosmos.outputs.accountEndpoint
+output openAiEndpoint string = openai.outputs.endpoint
