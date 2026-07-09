@@ -19,4 +19,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/KnowVault.Domain.Tests/KnowVault.Domain.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/KnowVault.DlqTool/KnowVault.DlqTool.csproj" />
+  </Folder>
 </Solution>

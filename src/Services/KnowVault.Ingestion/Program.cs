@@ -1,3 +1,4 @@
+using Azure.AI.DocumentIntelligence;
 using Azure.AI.OpenAI;
 using Azure.Identity;
 using Azure.Search.Documents.Indexes;
@@ -40,6 +41,18 @@ else
 {
     builder.Services.AddSingleton<IChunkEmbedder, NullChunkEmbedder>();
     builder.Services.AddSingleton<IChunkSink, LoggingChunkSink>();
+}
+
+var docIntelligenceEndpoint = builder.Configuration["Azure:DocumentIntelligence:Endpoint"];
+if (!string.IsNullOrEmpty(docIntelligenceEndpoint))
+{
+    builder.Services.AddSingleton(
+        new DocumentIntelligenceClient(new Uri(docIntelligenceEndpoint), new DefaultAzureCredential()));
+    builder.Services.AddSingleton<IPdfExtractor, DocumentIntelligencePdfExtractor>();
+}
+else
+{
+    builder.Services.AddSingleton<IPdfExtractor, UnavailablePdfExtractor>();
 }
 
 builder.Services.AddSingleton<IngestionPipeline>();

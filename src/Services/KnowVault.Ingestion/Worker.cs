@@ -36,12 +36,13 @@ public sealed partial class Worker(
 
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
-        var document = args.Message.Body.ToObjectFromJson<DocumentChanged>();
+        var document = Parse(args.Message.Body);
         if (document is null)
         {
             LogPoisonMessage(logger, args.Message.MessageId);
             await args.DeadLetterMessageAsync(args.Message, "deserialization-failed",
-                $"Body is not a {nameof(DocumentChanged)} payload.", args.CancellationToken);
+                $"Body is neither a {nameof(DocumentChanged)} payload nor an Event Grid BlobCreated event.",
+                args.CancellationToken);
             return;
         }
 
@@ -54,6 +55,26 @@ public sealed partial class Worker(
         {
             LogIngestionFailed(logger, ex, document.DocumentId, args.Message.DeliveryCount);
             await args.AbandonMessageAsync(args.Message, cancellationToken: args.CancellationToken);
+        }
+    }
+
+    /// <summary>Accepts both message shapes: our contract (Admin/Connector) and Event Grid (Azure upload path).</summary>
+    private static DocumentChanged? Parse(BinaryData body)
+    {
+        if (EventGridBlobCreated.TryMap(body, out var mapped))
+        {
+            return mapped;
+        }
+
+        try
+        {
+            var document = body.ToObjectFromJson<DocumentChanged>();
+            // Reject bodies that deserialized but carry none of the contract's identity.
+            return document is { TenantId: not null, DocumentId: not null } ? document : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
         }
     }
 

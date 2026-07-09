@@ -16,7 +16,7 @@ namespace KnowVault.Admin;
 /// </summary>
 public static class UploadEndpoints
 {
-    private static readonly string[] AllowedExtensions = [".md", ".txt"];
+    private static readonly string[] AllowedExtensions = [".md", ".txt", ".pdf"];
 
     private static readonly TimeSpan SasLifetime = TimeSpan.FromMinutes(15);
 

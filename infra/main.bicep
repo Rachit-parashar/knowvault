@@ -143,6 +143,16 @@ module openai 'modules/openai.bicep' = if (deployOpenAi) {
   }
 }
 
+module docIntelligence 'modules/docintelligence.bicep' = {
+  scope: rg
+  name: 'docintelligence'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+  }
+}
+
 module eventGrid 'modules/eventgrid.bicep' = {
   scope: rg
   name: 'eventgrid'
@@ -165,3 +175,4 @@ output storageAccountName string = storage.outputs.accountName
 output searchEndpoint string = search.outputs.searchEndpoint
 output cosmosEndpoint string = cosmos.outputs.accountEndpoint
 output openAiEndpoint string = deployOpenAi ? openai!.outputs.endpoint : ''
+output docIntelligenceEndpoint string = docIntelligence.outputs.endpoint

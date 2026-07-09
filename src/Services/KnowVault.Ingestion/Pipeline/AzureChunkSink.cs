@@ -167,6 +167,20 @@ public sealed partial class AzureChunkSink(
         }
     }
 
+    public async Task<string?> GetContentHashAsync(string tenantId, string documentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _chunks.ReadItemAsync<ChunkRecord>(
+                $"{tenantId}-{documentId}-0", new PartitionKey(tenantId), cancellationToken: cancellationToken);
+            return response.Resource.ContentHash;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
     public void Dispose() => _indexGate.Dispose();
 
     /// <summary>Cosmos chunk record; serialized camelCase (id is the chunk id).</summary>
