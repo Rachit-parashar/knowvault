@@ -32,17 +32,24 @@ app.MapPost("/api/answer", async (
     HttpContext http,
     CancellationToken cancellationToken) =>
 {
-    if (string.IsNullOrWhiteSpace(request.TenantId) || string.IsNullOrWhiteSpace(request.Question))
+    var tenantId = http.Request.Headers[IdentityHeaders.Tenant].ToString();
+    var userId = http.Request.Headers[IdentityHeaders.User].ToString();
+    if (userId.Length == 0)
+    {
+        userId = "anonymous";
+    }
+
+    if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(request.Question))
     {
         http.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await http.Response.WriteAsync("tenantId and question are required.", cancellationToken);
+        await http.Response.WriteAsync("identity headers and a question are required.", cancellationToken);
         return;
     }
 
     http.Response.Headers.ContentType = "text/event-stream";
     http.Response.Headers.CacheControl = "no-cache";
 
-    var (sources, chunks) = await answerer.RetrieveSourcesAsync(request, cancellationToken);
+    var (sources, chunks) = await answerer.RetrieveSourcesAsync(tenantId, userId, request, cancellationToken);
 
     // First event: the numbered sources the client resolves [n] markers against.
     await WriteEventAsync(http.Response, "sources",

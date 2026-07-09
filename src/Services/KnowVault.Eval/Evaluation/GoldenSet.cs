@@ -8,11 +8,27 @@ public sealed record GoldenQuestion(
     string Question,
     IReadOnlyList<string> ExpectedDocumentIds,
     string ReferenceAnswer,
+    SecuritySpec? Security,
     string? Notes);
+
+/// <summary>Data-driven security check: ask as both identities, compare against the markers.</summary>
+public sealed record SecuritySpec(
+    string AuthorizedTenant,
+    string AuthorizedUser,
+    string UnauthorizedTenant,
+    string UnauthorizedUser,
+    IReadOnlyList<string> ContentMarkers,
+    string RestrictedLogicalId);
 
 public sealed record GoldenSet(int Version, string Corpus, IReadOnlyList<GoldenQuestion> Questions);
 
-public sealed record SeedDocument(string LogicalId, string File, string Tenant, string Probe);
+public sealed record SeedDocument(
+    string LogicalId,
+    string File,
+    string Tenant,
+    string Probe,
+    string? ProbeUser = null,
+    IReadOnlyList<string>? AllowedPrincipals = null);
 
 public sealed record SeedManifest(IReadOnlyList<SeedDocument> Documents);
 

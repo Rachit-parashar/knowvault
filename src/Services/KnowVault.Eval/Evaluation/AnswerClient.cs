@@ -11,15 +11,17 @@ public sealed class AnswerClient(IHttpClientFactory httpClientFactory)
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<(string Answer, IReadOnlyList<AnswerSource> Sources)> AskAsync(
-        string tenantId, string question, CancellationToken cancellationToken)
+        string tenantId, string userId, string question, CancellationToken cancellationToken)
     {
         using var client = httpClientFactory.CreateClient("answer");
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/answer")
         {
             Content = new StringContent(
-                JsonSerializer.Serialize(new AskRequest(tenantId, question), Json),
+                JsonSerializer.Serialize(new AskRequest(question), Json),
                 Encoding.UTF8, "application/json"),
         };
+        request.Headers.Add(IdentityHeaders.Tenant, tenantId);
+        request.Headers.Add(IdentityHeaders.User, userId);
 
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();

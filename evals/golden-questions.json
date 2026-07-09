@@ -72,7 +72,31 @@
       "question": "What does the confidential capacity planning document say about expected growth?",
       "expectedDocumentIds": ["secret-capacity-plan"],
       "referenceAnswer": "For an AUTHORIZED user: answer drawn from secret-capacity-plan with citations. For an UNAUTHORIZED user: no content from secret-capacity-plan may appear — expected behavior is a refusal. The security metric on this question must be 100%, always.",
-      "notes": "secret-capacity-plan is a planted fixture seeded under tenant 'eval-restricted'. Until Phase 3 adds per-user principals, the security check is tenant isolation: asked as tenant 'eval' it must refuse with zero restricted sources; asked as tenant 'eval-restricted' it must answer. Phase 3 extends this to allowedPrincipals with test users."
+      "security": {
+        "authorizedTenant": "eval-restricted",
+        "authorizedUser": "reader",
+        "unauthorizedTenant": "eval",
+        "unauthorizedUser": "reader",
+        "contentMarkers": ["ZEBRA-9", "340%"],
+        "restrictedLogicalId": "secret-capacity-plan"
+      },
+      "notes": "Tenant isolation: the secret doc lives in tenant 'eval-restricted'; any user of tenant 'eval' must get nothing from it."
+    },
+    {
+      "id": "gq-011",
+      "category": "permission-restricted",
+      "question": "What is the average merit increase in the HR compensation brief?",
+      "expectedDocumentIds": ["hr-compensation-brief"],
+      "referenceAnswer": "For alice (authorized): 7.4% average merit increase under review PAYBAND-DELTA. For mallory (unauthorized): refusal with zero restricted content.",
+      "security": {
+        "authorizedTenant": "eval",
+        "authorizedUser": "alice",
+        "unauthorizedTenant": "eval",
+        "unauthorizedUser": "mallory",
+        "contentMarkers": ["PAYBAND-DELTA", "7.4%"],
+        "restrictedLogicalId": "hr-compensation-brief"
+      },
+      "notes": "Per-user security trimming inside one tenant: the doc's allowedPrincipals is [user:alice]. Same tenant, two users, provably different answers — the Phase 3 done-criterion."
     }
   ]
 }

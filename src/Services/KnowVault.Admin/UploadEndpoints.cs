@@ -83,6 +83,16 @@ public static class UploadEndpoints
             return TypedResults.NotFound($"No uploaded blob at {blobPath}.");
         }
 
+        // Per-document ACLs: caller-supplied principals (user:/group:) or org-wide default.
+        var allowedPrincipals = request.AllowedPrincipals is { Count: > 0 }
+            ? request.AllowedPrincipals
+            : [$"tenant:{tenantId}:all"];
+        if (allowedPrincipals.Any(p => !IsValidPrincipal(p, tenantId)))
+        {
+            return TypedResults.BadRequest(
+                "allowedPrincipals entries must be 'user:<id>', 'group:<id>', or 'tenant:<tenantId>:all'.");
+        }
+
         var message = new DocumentChanged(
             TenantId: tenantId,
             SourceId: "direct-upload",
@@ -91,8 +101,7 @@ public static class UploadEndpoints
             BlobPath: blobPath,
             SourceUrl: null,
             ContentHash: null,
-            // Direct uploads are org-wide until per-document ACLs arrive in Phase 3.
-            AllowedPrincipals: [$"tenant:{tenantId}:all"],
+            AllowedPrincipals: allowedPrincipals,
             DetectedAt: DateTimeOffset.UtcNow);
 
         var sender = messaging.CreateSender("document-changed");
@@ -112,10 +121,17 @@ public static class UploadEndpoints
 
     private static bool IsSafeSegment(string value) =>
         value.Length is > 0 and <= 64 && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+
+    private static bool IsValidPrincipal(string principal, string tenantId) =>
+        principal == $"tenant:{tenantId}:all" ||
+        (principal.StartsWith("user:", StringComparison.Ordinal) &&
+         KnowVault.Domain.Security.SecurityTrimming.IsValidSegment(principal["user:".Length..])) ||
+        (principal.StartsWith("group:", StringComparison.Ordinal) &&
+         KnowVault.Domain.Security.SecurityTrimming.IsValidSegment(principal["group:".Length..]));
 }
 
 public sealed record CreateUploadRequest(string FileName);
 
 public sealed record CreateUploadResponse(string DocumentId, string BlobPath, Uri UploadUrl, DateTimeOffset ExpiresAt);
 
-public sealed record CompleteUploadRequest(string FileName);
+public sealed record CompleteUploadRequest(string FileName, IReadOnlyList<string>? AllowedPrincipals = null);
