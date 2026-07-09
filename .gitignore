@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Eval environment-local artifacts
+evals/.idmap.*.json

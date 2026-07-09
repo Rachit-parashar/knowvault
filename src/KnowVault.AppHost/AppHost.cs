@@ -38,7 +38,9 @@ builder.AddProject<Projects.KnowVault_Ingestion>("ingestion")
 
 // Eval harness
 builder.AddProject<Projects.KnowVault_Eval>("eval")
+    .WithReference(admin)
     .WithReference(query)
-    .WithReference(answer);
+    .WithReference(answer)
+    .WithEnvironment("EVALS_DIR", Path.Combine(builder.AppHostDirectory, "..", "..", "evals"));
 
 builder.Build().Run();
