@@ -5,6 +5,7 @@
     { "logicalId": "cosmos-db-partitioning", "file": "cosmos-db-partitioning.md", "tenant": "eval", "probe": "logical partition can hold up to 20 GB" },
     { "logicalId": "ai-search-vector-overview", "file": "ai-search-vector-overview.md", "tenant": "eval", "probe": "merged with Reciprocal Rank Fusion" },
     { "logicalId": "well-architected-reliability", "file": "well-architected-reliability.md", "tenant": "eval", "probe": "Recovery Time Objective" },
-    { "logicalId": "secret-capacity-plan", "file": "secret-capacity-plan.md", "tenant": "eval-restricted", "probe": "codename ZEBRA-9" }
+    { "logicalId": "secret-capacity-plan", "file": "secret-capacity-plan.md", "tenant": "eval-restricted", "probe": "codename ZEBRA-9" },
+    { "logicalId": "hr-compensation-brief", "file": "hr-compensation-brief.md", "tenant": "eval", "probe": "codename PAYBAND-DELTA merit increase", "probeUser": "alice", "allowedPrincipals": ["user:alice"] }
   ]
 }

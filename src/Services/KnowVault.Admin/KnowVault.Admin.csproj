@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\KnowVault.ServiceDefaults\KnowVault.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Shared\KnowVault.Contracts\KnowVault.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\KnowVault.Domain\KnowVault.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

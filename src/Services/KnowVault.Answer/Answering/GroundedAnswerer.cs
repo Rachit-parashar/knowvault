@@ -26,22 +26,29 @@ public sealed partial class GroundedAnswerer(
         openAiClient.GetChatClient(configuration["Azure:OpenAI:GenerationDeployment"] ?? "gpt-5-mini");
 
     public async Task<(IReadOnlyList<AnswerSource> Sources, IReadOnlyList<RetrievedChunk> Chunks)> RetrieveSourcesAsync(
-        AskRequest request, CancellationToken cancellationToken)
+        string tenantId, string userId, AskRequest request, CancellationToken cancellationToken)
     {
         using var query = httpClientFactory.CreateClient("query");
-        var response = await query.PostAsJsonAsync(
-            "/api/query", new QueryRequest(request.TenantId, request.Question), cancellationToken);
+
+        // Propagate the caller's identity so trimming happens as THEM, not as us.
+        using var queryRequest = new HttpRequestMessage(HttpMethod.Post, "/api/query")
+        {
+            Content = JsonContent.Create(new QueryRequest(request.Question)),
+        };
+        queryRequest.Headers.Add(IdentityHeaders.Tenant, tenantId);
+        queryRequest.Headers.Add(IdentityHeaders.User, userId);
+
+        using var response = await query.SendAsync(queryRequest, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<QueryResponse>(cancellationToken)
             ?? new QueryResponse([]);
 
-        // Dedupe by document for the source list while keeping every chunk for context.
         var sources = result.Chunks
             .Select((c, i) => new AnswerSource(i + 1, c.ChunkId, c.DocumentId, c.Title, c.SourceUrl))
             .ToList();
 
-        LogSources(logger, sources.Count, request.TenantId);
+        LogSources(logger, sources.Count, tenantId, userId);
         return (sources, result.Chunks);
     }
 
@@ -87,6 +94,6 @@ public sealed partial class GroundedAnswerer(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Retrieved {SourceCount} sources for answer (tenant {TenantId})")]
-    private static partial void LogSources(ILogger logger, int sourceCount, string tenantId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Retrieved {SourceCount} sources for answer (tenant {TenantId}, user {UserId})")]
+    private static partial void LogSources(ILogger logger, int sourceCount, string tenantId, string userId);
 }

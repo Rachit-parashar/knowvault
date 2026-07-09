@@ -12,6 +12,7 @@
   h1 { font-size:20px; margin-bottom:4px; }
   h1 span { color:var(--accent); }
   .tag { color:var(--dim); font-size:13px; margin-bottom:24px; }
+  .tag select { background:var(--panel); color:var(--text); border:1px solid #2a3550; border-radius:6px; padding:2px 6px; }
   .qa { margin-bottom:20px; }
   .q { background:var(--panel); border-radius:10px 10px 10px 2px; padding:10px 14px;
        display:inline-block; max-width:90%; }
@@ -34,7 +35,11 @@
 </head>
 <body>
   <h1>Know<span>Vault</span></h1>
-  <div class="tag">Ask a question — answers come only from your documents, with citations. Tenant: <b>demo</b></div>
+  <div class="tag">
+    Ask a question — answers come only from documents <i>you</i> can see, with citations.
+    &nbsp;Tenant <select id="tenant"><option>eval</option><option>demo</option></select>
+    &nbsp;User <select id="user"><option>reader</option><option>alice</option><option>mallory</option></select>
+  </div>
   <div id="log"></div>
   <form id="form">
     <div class="row">
@@ -69,8 +74,12 @@ form.addEventListener("submit", async (e) => {
   try {
     const res = await fetch("/api/answer", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenantId: "demo", question })
+      headers: {
+        "Content-Type": "application/json",
+        "X-Dev-Tenant": document.getElementById("tenant").value,
+        "X-Dev-User": document.getElementById("user").value
+      },
+      body: JSON.stringify({ question })
     });
     if (!res.ok) throw new Error(await res.text());
 

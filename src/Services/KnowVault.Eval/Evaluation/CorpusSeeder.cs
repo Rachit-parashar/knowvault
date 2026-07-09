@@ -45,9 +45,10 @@ public sealed partial class CorpusSeeder(IHttpClientFactory httpClientFactory, I
             using var putRequest = new HttpRequestMessage(HttpMethod.Put, new Uri(uploadUrl)) { Content = content };
             (await blobHttp.SendAsync(putRequest, cancellationToken)).EnsureSuccessStatusCode();
 
-            // 3. Complete → DocumentChanged → ingestion
+            // 3. Complete → DocumentChanged → ingestion (with per-document ACLs where specified)
             var completeResponse = await admin.PostAsJsonAsync(
-                $"/api/tenants/{doc.Tenant}/documents/{documentId}/complete", new { fileName = doc.File }, cancellationToken);
+                $"/api/tenants/{doc.Tenant}/documents/{documentId}/complete",
+                new { fileName = doc.File, allowedPrincipals = doc.AllowedPrincipals }, cancellationToken);
             completeResponse.EnsureSuccessStatusCode();
 
             idMap[doc.LogicalId] = documentId;
@@ -78,8 +79,15 @@ public sealed partial class CorpusSeeder(IHttpClientFactory httpClientFactory, I
     private static async Task<bool> IsRetrievableAsync(
         HttpClient query, SeedDocument doc, string documentId, CancellationToken cancellationToken)
     {
-        var response = await query.PostAsJsonAsync(
-            "/api/query", new QueryRequest(doc.Tenant, doc.Probe, Top: 5), cancellationToken);
+        // Probe as a user who is allowed to see the document.
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/query")
+        {
+            Content = JsonContent.Create(new QueryRequest(doc.Probe, Top: 5)),
+        };
+        request.Headers.Add(IdentityHeaders.Tenant, doc.Tenant);
+        request.Headers.Add(IdentityHeaders.User, doc.ProbeUser ?? "reader");
+
+        using var response = await query.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             return false;

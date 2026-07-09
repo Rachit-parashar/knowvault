@@ -43,8 +43,8 @@ public sealed partial class EvalRunner(
     AnswerJudge judge,
     ILogger<EvalRunner> logger)
 {
-    private const string AnswerTenant = "eval";
-    private const string RestrictedTenant = "eval-restricted";
+    private const string DefaultTenant = "eval";
+    private const string DefaultUser = "reader";
     private const string RefusalMarker = "don't have information";
 
     private static readonly System.Text.Json.JsonSerializerOptions IndentedJson =
@@ -82,17 +82,17 @@ public sealed partial class EvalRunner(
     {
         var stopwatch = Stopwatch.StartNew();
 
-        // --- retrieval metrics (skipped for unanswerable questions) ---
+        // Security questions run their main pass as the UNAUTHORIZED identity.
+        var (tenant, user) = question.Security is { } spec
+            ? (spec.UnauthorizedTenant, spec.UnauthorizedUser)
+            : (DefaultTenant, DefaultUser);
+
+        // --- retrieval metrics ---
         bool? hit = null;
         double reciprocalRank = 0;
-        IReadOnlyList<RetrievedChunk> chunks = [];
+        var chunks = await QueryAsAsync(query, tenant, user, question.Question, cancellationToken);
 
-        var queryResponse = await query.PostAsJsonAsync(
-            "/api/query", new QueryRequest(AnswerTenant, question.Question, Top: 10), cancellationToken);
-        queryResponse.EnsureSuccessStatusCode();
-        chunks = (await queryResponse.Content.ReadFromJsonAsync<QueryResponse>(cancellationToken))?.Chunks ?? [];
-
-        if (question.ExpectedDocumentIds.Count > 0 && question.Category != "permission-restricted")
+        if (question.ExpectedDocumentIds.Count > 0 && question.Security is null)
         {
             var ranks = chunks
                 .Select((c, i) => (Logical: documentToLogical.GetValueOrDefault(c.DocumentId), Rank: i + 1))
@@ -104,25 +104,25 @@ public sealed partial class EvalRunner(
         }
 
         // --- answer + behavioral metrics ---
-        var (answer, _) = await answerClient.AskAsync(AnswerTenant, question.Question, cancellationToken);
+        var (answer, _) = await answerClient.AskAsync(tenant, user, question.Question, cancellationToken);
         stopwatch.Stop();
 
         var refused = answer.Contains(RefusalMarker, StringComparison.OrdinalIgnoreCase);
         var refusalCorrect = question.Category == "unanswerable" ? refused : !refused;
 
         bool? securityPass = null;
-        if (question.Category == "permission-restricted")
+        if (question.Security is { } security)
         {
-            // Unauthorized tenant must get nothing from the restricted document...
-            var leaked = answer.Contains("ZEBRA-9", StringComparison.OrdinalIgnoreCase) ||
-                         answer.Contains("340%", StringComparison.Ordinal) ||
-                         chunks.Any(c => documentToLogical.GetValueOrDefault(c.DocumentId) == "secret-capacity-plan");
-            // ...and the authorized tenant must actually get the answer.
-            var (authorizedAnswer, _) = await answerClient.AskAsync(RestrictedTenant, question.Question, cancellationToken);
-            var authorizedOk = authorizedAnswer.Contains("340%", StringComparison.Ordinal) ||
-                               authorizedAnswer.Contains("ZEBRA-9", StringComparison.OrdinalIgnoreCase);
+            // The unauthorized identity must see no marker and no restricted source...
+            var leaked = security.ContentMarkers.Any(m => answer.Contains(m, StringComparison.OrdinalIgnoreCase)) ||
+                         chunks.Any(c => documentToLogical.GetValueOrDefault(c.DocumentId) == security.RestrictedLogicalId);
+            // ...and the authorized identity must actually get the content.
+            var (authorizedAnswer, _) = await answerClient.AskAsync(
+                security.AuthorizedTenant, security.AuthorizedUser, question.Question, cancellationToken);
+            var authorizedOk = security.ContentMarkers.Any(m =>
+                authorizedAnswer.Contains(m, StringComparison.OrdinalIgnoreCase));
             securityPass = !leaked && authorizedOk;
-            refusalCorrect = refused; // unauthorized run must refuse
+            refusalCorrect = refused; // the unauthorized run must refuse
         }
 
         // --- judge (answerable questions with sources only) ---
@@ -137,6 +137,21 @@ public sealed partial class EvalRunner(
         return new QuestionResult(
             question.Id, question.Category, hit, reciprocalRank, refusalCorrect,
             securityPass, groundedness, citationAccuracy, stopwatch.Elapsed.TotalMilliseconds, answer);
+    }
+
+    private static async Task<IReadOnlyList<RetrievedChunk>> QueryAsAsync(
+        HttpClient query, string tenant, string user, string question, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/query")
+        {
+            Content = JsonContent.Create(new QueryRequest(question, Top: 10)),
+        };
+        request.Headers.Add(IdentityHeaders.Tenant, tenant);
+        request.Headers.Add(IdentityHeaders.User, user);
+
+        using var response = await query.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<QueryResponse>(cancellationToken))?.Chunks ?? [];
     }
 
     private static EvalReport Aggregate(List<QuestionResult> results)
