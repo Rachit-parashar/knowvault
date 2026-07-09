@@ -18,6 +18,7 @@ public sealed partial class IngestionPipeline(
     BlobContainerClient uploads,
     IChunkEmbedder embedder,
     IChunkSink sink,
+    IPdfExtractor pdfExtractor,
     ILogger<IngestionPipeline> logger)
 {
     private const int EmbeddingBatchSize = 64;
@@ -26,8 +27,8 @@ public sealed partial class IngestionPipeline(
     private static readonly PlainTextParser PlainTextParser = new();
     private static readonly DocumentChunker Chunker = new(new Cl100kTokenCounter());
 
-    // Idempotency ledger: content hash per document. In-memory until the SQL
-    // Documents registry lands; a restart re-ingests, which upserts are safe for.
+    // Idempotency: in-memory fast path, then the sink's stored hash (Cosmos) —
+    // durable across restarts, so unchanged documents are never re-embedded.
     private readonly Dictionary<string, string> _seenHashes = [];
     private readonly Lock _seenHashesLock = new();
 
@@ -39,8 +40,8 @@ public sealed partial class IngestionPipeline(
                 $"Document {document.DocumentId} has no blob path; connector-sourced content arrives in Phase 5.");
         }
 
-        var content = await DownloadTextAsync(document.BlobPath, cancellationToken);
-        var contentHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
+        var raw = await DownloadAsync(document.BlobPath, cancellationToken);
+        var contentHash = Convert.ToHexStringLower(SHA256.HashData(raw.ToMemory().Span));
 
         var documentKey = $"{document.TenantId}:{document.DocumentId}";
         lock (_seenHashesLock)
@@ -52,9 +53,20 @@ public sealed partial class IngestionPipeline(
             }
         }
 
+        var storedHash = await sink.GetContentHashAsync(document.TenantId, document.DocumentId, cancellationToken);
+        if (storedHash == contentHash)
+        {
+            lock (_seenHashesLock)
+            {
+                _seenHashes[documentKey] = contentHash;
+            }
+
+            LogUnchanged(logger, document.DocumentId, contentHash);
+            return;
+        }
+
         var fileName = document.BlobPath[(document.BlobPath.LastIndexOf('/') + 1)..];
-        var parser = SelectParser(fileName);
-        var extracted = parser.Parse(content, Path.GetFileNameWithoutExtension(fileName));
+        var extracted = await ExtractAsync(fileName, raw, cancellationToken);
 
         // Per-tenant chunking config comes from Admin later; defaults for now.
         var chunks = Chunker.Chunk(extracted, new ChunkingOptions());
@@ -70,18 +82,28 @@ public sealed partial class IngestionPipeline(
         LogIngested(logger, document.DocumentId, document.TenantId, chunks.Count, contentHash);
     }
 
-    private async Task<string> DownloadTextAsync(string blobPath, CancellationToken cancellationToken)
+    private async Task<BinaryData> DownloadAsync(string blobPath, CancellationToken cancellationToken)
     {
         var response = await uploads.GetBlobClient(blobPath).DownloadContentAsync(cancellationToken);
-        return response.Value.Content.ToString();
+        return response.Value.Content;
     }
 
-    private static IDocumentParser SelectParser(string fileName) =>
-        Path.GetExtension(fileName).ToLowerInvariant() switch
+    /// <summary>PDFs go through Document Intelligence into markdown; text formats parse natively.</summary>
+    private async Task<ExtractedDocument> ExtractAsync(
+        string fileName, BinaryData raw, CancellationToken cancellationToken)
+    {
+        var title = Path.GetFileNameWithoutExtension(fileName);
+        switch (Path.GetExtension(fileName).ToLowerInvariant())
         {
-            ".md" or ".markdown" => MarkdownParser,
-            _ => PlainTextParser,
-        };
+            case ".pdf":
+                var markdown = await pdfExtractor.ExtractMarkdownAsync(raw, cancellationToken);
+                return MarkdownParser.Parse(markdown, title);
+            case ".md" or ".markdown":
+                return MarkdownParser.Parse(raw.ToString(), title);
+            default:
+                return PlainTextParser.Parse(raw.ToString(), title);
+        }
+    }
 
     private async Task<IReadOnlyList<EmbeddedChunk>> EmbedAllAsync(
         IReadOnlyList<DocumentChunk> chunks, CancellationToken cancellationToken)

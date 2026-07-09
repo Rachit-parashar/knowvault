@@ -21,6 +21,9 @@ public interface IChunkSink
         string contentHash,
         IReadOnlyList<EmbeddedChunk> chunks,
         CancellationToken cancellationToken);
+
+    /// <summary>The stored content hash of a document, or null if never ingested — the durable idempotency check.</summary>
+    Task<string?> GetContentHashAsync(string tenantId, string documentId, CancellationToken cancellationToken);
 }
 
 /// <summary>Placeholder sink used until the AI Search + Cosmos resources exist: logs what would be written.</summary>
@@ -35,6 +38,9 @@ public sealed partial class LoggingChunkSink(ILogger<LoggingChunkSink> logger) :
         LogUpsert(logger, chunks.Count, document.DocumentId, document.TenantId, contentHash);
         return Task.CompletedTask;
     }
+
+    public Task<string?> GetContentHashAsync(string tenantId, string documentId, CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
 
     [LoggerMessage(Level = LogLevel.Information,
         Message = "Would index {ChunkCount} chunks for document {DocumentId} (tenant {TenantId}, hash {ContentHash})")]
