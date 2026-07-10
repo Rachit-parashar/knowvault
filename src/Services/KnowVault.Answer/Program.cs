@@ -17,6 +17,7 @@ var openAiEndpoint = builder.Configuration["Azure:OpenAI:Endpoint"];
 if (!string.IsNullOrEmpty(openAiEndpoint))
 {
     builder.Services.AddSingleton(new AzureOpenAIClient(new Uri(openAiEndpoint), new DefaultAzureCredential()));
+    builder.Services.AddSingleton<UsageMetrics>();
     builder.Services.AddSingleton<GroundedAnswerer>();
 }
 
@@ -62,7 +63,7 @@ app.MapPost("/api/answer", async (
     }
     else
     {
-        await foreach (var token in answerer.StreamAnswerAsync(request.Question, chunks, cancellationToken))
+        await foreach (var token in answerer.StreamAnswerAsync(tenantId, request.Question, chunks, cancellationToken))
         {
             await WriteEventAsync(http.Response, "token", JsonSerializer.Serialize(token), cancellationToken);
         }
