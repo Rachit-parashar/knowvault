@@ -82,12 +82,21 @@ public sealed partial class AzureChunkSink(
     }
 
     /// <summary>Remove chunks beyond the new count — leftovers from a longer previous version.</summary>
-    private async Task DeleteStaleChunksAsync(
-        DocumentChanged document, int newCount, CancellationToken cancellationToken)
+    private Task DeleteStaleChunksAsync(DocumentChanged document, int newCount, CancellationToken cancellationToken) =>
+        DeleteChunksFromIndexAsync(document.TenantId, document.DocumentId, newCount, cancellationToken);
+
+    public async Task DeleteDocumentAsync(string tenantId, string documentId, CancellationToken cancellationToken)
+    {
+        await EnsureIndexAsync(cancellationToken);
+        await DeleteChunksFromIndexAsync(tenantId, documentId, fromIndex: 0, cancellationToken);
+    }
+
+    private async Task DeleteChunksFromIndexAsync(
+        string tenantId, string documentId, int fromIndex, CancellationToken cancellationToken)
     {
         var options = new SearchOptions
         {
-            Filter = $"tenantId eq '{document.TenantId}' and documentId eq '{document.DocumentId}'",
+            Filter = $"tenantId eq '{tenantId}' and documentId eq '{documentId}'",
             Size = 1000,
         };
         options.Select.Add("chunkId");
@@ -98,7 +107,7 @@ public sealed partial class AzureChunkSink(
         {
             var chunkId = (string)result.Document["chunkId"];
             var marker = chunkId.LastIndexOf('-');
-            if (marker >= 0 && int.TryParse(chunkId[(marker + 1)..], out var index) && index >= newCount)
+            if (marker >= 0 && int.TryParse(chunkId[(marker + 1)..], out var index) && index >= fromIndex)
             {
                 stale.Add(chunkId);
             }
@@ -112,11 +121,11 @@ public sealed partial class AzureChunkSink(
         await _searchClient.DeleteDocumentsAsync("chunkId", stale, cancellationToken: cancellationToken);
         foreach (var chunkId in stale)
         {
-            await _chunks.DeleteItemAsync<ChunkRecord>(chunkId, new PartitionKey(document.TenantId),
+            await _chunks.DeleteItemAsync<ChunkRecord>(chunkId, new PartitionKey(tenantId),
                 cancellationToken: cancellationToken);
         }
 
-        LogStaleDeleted(logger, stale.Count, document.DocumentId);
+        LogStaleDeleted(logger, stale.Count, documentId);
     }
 
     /// <summary>Index schemas are code, not infra: create/update the chunks index on first use.</summary>

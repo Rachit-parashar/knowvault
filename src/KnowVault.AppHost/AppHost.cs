@@ -3,6 +3,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Storage: Azurite locally, real Storage account in Azure.
 var storage = builder.AddAzureStorage("storage").RunAsEmulator();
 var uploads = storage.AddBlobContainer("uploads");
+var syncState = storage.AddBlobContainer("sync-state");
 
 // Messaging: Service Bus emulator locally, real namespace in Azure.
 var messaging = builder.AddAzureServiceBus("messaging").RunAsEmulator();
@@ -29,7 +30,14 @@ var gateway = builder.AddProject<Projects.KnowVault_Gateway>("gateway")
     .WithReference(admin);
 
 // Ingestion path
-builder.AddProject<Projects.KnowVault_Connector>("connector");
+builder.AddProject<Projects.KnowVault_Connector>("connector")
+    .WithReference(uploads)
+    .WithReference(syncState)
+    .WithReference(messaging)
+    .WithEnvironment("Connector__InboxPath", Path.Combine(builder.AppHostDirectory, "..", "..", "connector-inbox"))
+    .WithEnvironment("Sync__IntervalSeconds", "15")
+    .WaitFor(uploads)
+    .WaitFor(messaging);
 builder.AddProject<Projects.KnowVault_Ingestion>("ingestion")
     .WithReference(uploads)
     .WithReference(messaging)
