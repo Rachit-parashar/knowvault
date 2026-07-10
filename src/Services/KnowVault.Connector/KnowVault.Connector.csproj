@@ -8,11 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Azure.Messaging.ServiceBus" Version="13.4.6" />
+    <PackageReference Include="Aspire.Azure.Storage.Blobs" Version="13.4.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\KnowVault.ServiceDefaults\KnowVault.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Shared\KnowVault.Contracts\KnowVault.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\KnowVault.Domain\KnowVault.Domain.csproj" />
   </ItemGroup>
 </Project>

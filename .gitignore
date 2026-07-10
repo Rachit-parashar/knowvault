@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Eval environment-local artifacts
 evals/.idmap.*.json
+
+# Local connector inbox (synced test documents)
+connector-inbox/
