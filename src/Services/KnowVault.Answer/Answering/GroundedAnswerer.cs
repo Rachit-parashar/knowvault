@@ -18,6 +18,7 @@ public sealed partial class GroundedAnswerer(
     IHttpClientFactory httpClientFactory,
     AzureOpenAIClient openAiClient,
     IConfiguration configuration,
+    UsageMetrics usage,
     ILogger<GroundedAnswerer> logger)
 {
     public const string RefusalLine = "I don't have information on that.";
@@ -53,10 +54,13 @@ public sealed partial class GroundedAnswerer(
     }
 
     public async IAsyncEnumerable<string> StreamAnswerAsync(
+        string tenantId,
         string question,
         IReadOnlyList<RetrievedChunk> chunks,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var completion = new StringBuilder();
         var context = new StringBuilder();
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -88,10 +92,15 @@ public sealed partial class GroundedAnswerer(
             {
                 if (!string.IsNullOrEmpty(part.Text))
                 {
+                    completion.Append(part.Text);
                     yield return part.Text;
                 }
             }
         }
+
+        stopwatch.Stop();
+        var promptText = string.Join("\n", messages.SelectMany(m => m.Content).Select(c => c.Text));
+        usage.RecordAnswer(tenantId, promptText, completion.ToString(), stopwatch.Elapsed);
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Retrieved {SourceCount} sources for answer (tenant {TenantId}, user {UserId})")]

@@ -58,7 +58,8 @@ public static class Extensions
             {
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    .AddMeter("KnowVault.*"); // custom usage/cost metrics from any service
             })
             .WithTracing(tracing =>
             {
