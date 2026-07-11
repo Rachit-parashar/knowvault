@@ -46,6 +46,69 @@ jobs:
         with:
           bicepFilePath: infra/main.bicep
 
-  # Phase 4 adds here: eval suite vs staging index when prompts/chunking/retrieval
-  # paths change, with the diff posted as a PR comment and hard gates on the
-  # security metric and >2-point hit-rate/groundedness drops.
+  # Runs the golden-question suite against the deployed dev environment.
+  # Hard gates: security must be 100%; hit-rate, refusal correctness and
+  # groundedness must stay >= 0.9. Results are posted as a PR comment.
+  eval-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC federated login to Azure
+      contents: read
+      pull-requests: write
+    env:
+      services__admin__https__0: https://admin.agreeableocean-420b50fe.southeastasia.azurecontainerapps.io
+      services__query__https__0: https://query.agreeableocean-420b50fe.southeastasia.azurecontainerapps.io
+      services__answer__https__0: https://answer.agreeableocean-420b50fe.southeastasia.azurecontainerapps.io
+      Azure__OpenAI__Endpoint: https://oai-knowvault-dev-woaaq7havkzpg.openai.azure.com/
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run eval suite against the live environment
+        run: |
+          dotnet run --project src/Services/KnowVault.Eval -c Release --urls http://localhost:5029 &
+          for i in $(seq 1 60); do curl -sf http://localhost:5029/ > /dev/null && break; sleep 2; done
+          curl -sf -X POST http://localhost:5029/api/eval/seed --max-time 300 > /dev/null
+          curl -sf -X POST http://localhost:5029/api/eval/run --max-time 900 -o eval-report.json
+          jq '{questions: .questionCount, security: .securityScore, hitRate: .hitRateAt10,
+               refusal: .refusalCorrectness, grounded: .meanGroundedness,
+               citations: .meanCitationAccuracy, p95ms: .latencyP95Ms}' eval-report.json
+
+      - name: Post results as PR comment
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f eval-report.json ]; then
+            {
+              echo "## Eval gate"
+              echo "| Metric | Value | Gate |"
+              echo "|---|---|---|"
+              jq -r '"| Security | \(.securityScore * 100)% | must be 100% |",
+                     "| Hit-rate@10 | \(.hitRateAt10 * 100)% | >= 90% |",
+                     "| Refusal correctness | \(.refusalCorrectness * 100)% | >= 90% |",
+                     "| Groundedness | \(.meanGroundedness * 100)% | >= 90% |",
+                     "| Citation accuracy | \(.meanCitationAccuracy * 100)% | info |",
+                     "| Latency p50/p95 | \(.latencyP50Ms | floor)ms / \(.latencyP95Ms | floor)ms | info |"' eval-report.json
+            } > comment.md
+          else
+            echo "## Eval gate: suite failed to produce a report" > comment.md
+          fi
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --repo ${{ github.repository }}
+
+      - name: Enforce gates
+        run: |
+          jq -e '.securityScore == 1' eval-report.json > /dev/null || { echo "::error::SECURITY GATE FAILED"; exit 1; }
+          jq -e '.hitRateAt10 >= 0.9' eval-report.json > /dev/null || { echo "::error::hit-rate below 0.9"; exit 1; }
+          jq -e '.refusalCorrectness >= 0.9' eval-report.json > /dev/null || { echo "::error::refusal correctness below 0.9"; exit 1; }
+          jq -e '.meanGroundedness >= 0.9' eval-report.json > /dev/null || { echo "::error::groundedness below 0.9"; exit 1; }
+          echo "All gates passed."

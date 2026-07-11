@@ -29,7 +29,8 @@ var identityBlock = {
 
 var registryBlock = [{ server: registryServer, identity: identityId }]
 
-// ---- Query: internal ingress, called by Answer ----
+// ---- Query: external in the dev environment so CI eval gates can reach it
+// (fixture data only; production posture puts this behind internal ingress + APIM) ----
 resource query 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'query'
   location: location
@@ -39,7 +40,7 @@ resource query 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: environmentId
     configuration: {
       registries: registryBlock
-      ingress: { external: false, targetPort: 8080 }
+      ingress: { external: true, targetPort: 8080 }
     }
     template: {
       containers: [
