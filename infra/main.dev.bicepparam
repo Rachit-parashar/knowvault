@@ -1,4 +1,4 @@
-using 'main.bicep'
+﻿using 'main.bicep'
 
 param environmentName = 'dev'
 // southeastasia: closest region to the team with full model availability;
@@ -10,7 +10,7 @@ param sqlAdminLogin = 'knowvaultadmin'
 // bills while idle; tear down between sessions regardless.
 param searchSku = 'free'
 param serviceBusSku = 'Basic'
-param imageTag = 'v3'
+param imageTag = 'v4'
 
 // Entra ID sign-in (knowvault-chat app registration) with demo identity
 // mappings so existing index ACLs (user:alice / group:hr) keep working.
@@ -24,3 +24,4 @@ param entraIdentityEnv = [
 // Pass the password at deploy time:
 //   az deployment sub create ... --parameters main.dev.bicepparam sqlAdminPassword=<value>
 param sqlAdminPassword = ''
+
