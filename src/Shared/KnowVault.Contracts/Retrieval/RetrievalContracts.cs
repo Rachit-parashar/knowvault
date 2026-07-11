@@ -19,7 +19,10 @@ public sealed record RetrievedChunk(
     string? SourceUrl,
     double Score);
 
-public sealed record AskRequest(string Question);
+/// <summary>One completed exchange, sent back by the client as conversation context.</summary>
+public sealed record ChatTurn(string Question, string Answer);
+
+public sealed record AskRequest(string Question, IReadOnlyList<ChatTurn>? History = null);
 
 /// <summary>Dev identity header names, replaced by JWT claims when Entra ID lands.</summary>
 public static class IdentityHeaders

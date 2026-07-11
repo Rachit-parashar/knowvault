@@ -105,7 +105,9 @@ app.MapPost("/api/answer", async (
     http.Response.Headers.ContentType = "text/event-stream";
     http.Response.Headers.CacheControl = "no-cache";
 
-    var (sources, chunks) = await answerer.RetrieveSourcesAsync(tenantId, userId, bearer, request, cancellationToken);
+    // Follow-ups retrieve as a standalone rewrite; first turns skip the extra call.
+    var searchQuestion = await answerer.RewriteQuestionAsync(request.Question, request.History, cancellationToken);
+    var (sources, chunks) = await answerer.RetrieveSourcesAsync(tenantId, userId, bearer, searchQuestion, cancellationToken);
 
     // First event: the numbered sources the client resolves [n] markers against.
     await WriteEventAsync(http.Response, "sources",
@@ -118,7 +120,7 @@ app.MapPost("/api/answer", async (
     }
     else
     {
-        await foreach (var token in answerer.StreamAnswerAsync(tenantId, request.Question, chunks, cancellationToken))
+        await foreach (var token in answerer.StreamAnswerAsync(tenantId, request.Question, request.History, chunks, cancellationToken))
         {
             await WriteEventAsync(http.Response, "token", JsonSerializer.Serialize(token), cancellationToken);
         }

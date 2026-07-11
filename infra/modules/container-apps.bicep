@@ -67,6 +67,7 @@ resource query 'Microsoft.App/containerApps@2024-03-01' = {
           env: concat(commonEnv, entraBaseEnv, entraIdentityEnv, [
             { name: 'Azure__Search__Endpoint', value: searchEndpoint }
             { name: 'Azure__OpenAI__Endpoint', value: openAiEndpoint }
+            { name: 'Azure__Cosmos__Endpoint', value: cosmosEndpoint }
             { name: 'DevUsers__alice__0', value: 'hr' }
           ])
         }
