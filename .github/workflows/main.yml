@@ -27,9 +27,9 @@ jobs:
   deploy-infra:
     needs: build
     runs-on: ubuntu-latest
-    environment: staging
-    # Enable once AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID
-    # federated-credential secrets are configured in the repo.
+    permissions:
+      id-token: write
+      contents: read
     if: ${{ vars.AZURE_DEPLOY_ENABLED == 'true' }}
     steps:
       - uses: actions/checkout@v4
@@ -40,14 +40,16 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy Bicep (staging)
+      # Single shared dev environment for now; a true staging environment
+      # needs AI Search off the free tier (one free service per subscription).
+      - name: Deploy Bicep (dev, infra only)
         run: |
           az deployment sub create \
-            --name knowvault-staging-${{ github.run_id }} \
-            --location eastus2 \
+            --name knowvault-ci-${{ github.run_number }} \
+            --location southeastasia \
             --template-file infra/main.bicep \
             --parameters infra/main.dev.bicepparam \
-            --parameters environmentName=staging sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}"
+            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD }}"
 
   # Later phases add: push images to ACR → deploy → smoke tests + full eval run
   # → manual approval → prod → Container Apps revision shift 10% → 100%.
