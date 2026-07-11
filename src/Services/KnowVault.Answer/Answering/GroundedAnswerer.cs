@@ -27,17 +27,25 @@ public sealed partial class GroundedAnswerer(
         openAiClient.GetChatClient(configuration["Azure:OpenAI:GenerationDeployment"] ?? "gpt-5-mini");
 
     public async Task<(IReadOnlyList<AnswerSource> Sources, IReadOnlyList<RetrievedChunk> Chunks)> RetrieveSourcesAsync(
-        string tenantId, string userId, AskRequest request, CancellationToken cancellationToken)
+        string tenantId, string userId, string? bearerToken, AskRequest request, CancellationToken cancellationToken)
     {
         using var query = httpClientFactory.CreateClient("query");
 
-        // Propagate the caller's identity so trimming happens as THEM, not as us.
+        // Propagate the caller's identity so trimming happens as THEM, not as us:
+        // the original bearer token when signed in (plan §5b), dev headers otherwise.
         using var queryRequest = new HttpRequestMessage(HttpMethod.Post, "/api/query")
         {
             Content = JsonContent.Create(new QueryRequest(request.Question)),
         };
-        queryRequest.Headers.Add(IdentityHeaders.Tenant, tenantId);
-        queryRequest.Headers.Add(IdentityHeaders.User, userId);
+        if (bearerToken is not null)
+        {
+            queryRequest.Headers.Authorization = new("Bearer", bearerToken);
+        }
+        else
+        {
+            queryRequest.Headers.Add(IdentityHeaders.Tenant, tenantId);
+            queryRequest.Headers.Add(IdentityHeaders.User, userId);
+        }
 
         using var response = await query.SendAsync(queryRequest, cancellationToken);
         response.EnsureSuccessStatusCode();

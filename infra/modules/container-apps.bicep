@@ -13,7 +13,23 @@ param storageAccountName string
 param serviceBusNamespace string
 param imageTag string = 'v1'
 
+@description('Entra ID sign-in configuration; empty disables JWT auth (dev-header identity only).')
+param entraTenantId string = ''
+param entraClientId string = ''
+
+@description('Extra env entries mapping Entra object ids to friendly principal names (demo data).')
+param entraIdentityEnv array = []
+
 var serviceBusFqdn = '${serviceBusNamespace}.servicebus.windows.net'
+
+var entraBaseEnv = [
+  { name: 'Entra__TenantId', value: entraTenantId }
+  { name: 'Entra__ClientId', value: entraClientId }
+  // Dev environment keeps header identity for local tools and the CI eval
+  // gate; production posture sets this false (bearer tokens mandatory).
+  { name: 'Entra__AllowDevHeaders', value: 'true' }
+  { name: 'Entra__AppTenant', value: 'eval' }
+]
 var uploadsConnection = 'Endpoint=https://${storageAccountName}.blob.${environment().suffixes.storage};ContainerName=uploads'
 var syncStateConnection = 'Endpoint=https://${storageAccountName}.blob.${environment().suffixes.storage};ContainerName=sync-state'
 
@@ -48,7 +64,7 @@ resource query 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'query'
           image: '${registryServer}/knowvault/query:${imageTag}'
           resources: { cpu: json('0.25'), memory: '0.5Gi' }
-          env: concat(commonEnv, [
+          env: concat(commonEnv, entraBaseEnv, entraIdentityEnv, [
             { name: 'Azure__Search__Endpoint', value: searchEndpoint }
             { name: 'Azure__OpenAI__Endpoint', value: openAiEndpoint }
             { name: 'DevUsers__alice__0', value: 'hr' }
@@ -78,7 +94,7 @@ resource answer 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'answer'
           image: '${registryServer}/knowvault/answer:${imageTag}'
           resources: { cpu: json('0.25'), memory: '0.5Gi' }
-          env: concat(commonEnv, [
+          env: concat(commonEnv, entraBaseEnv, [
             { name: 'Azure__OpenAI__Endpoint', value: openAiEndpoint }
             { name: 'services__query__http__0', value: 'http://query' }
           ])

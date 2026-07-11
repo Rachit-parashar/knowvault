@@ -10,6 +10,17 @@ param sqlAdminLogin = 'knowvaultadmin'
 // bills while idle; tear down between sessions regardless.
 param searchSku = 'free'
 param serviceBusSku = 'Basic'
+param imageTag = 'v2'
+
+// Entra ID sign-in (knowvault-chat app registration) with demo identity
+// mappings so existing index ACLs (user:alice / group:hr) keep working.
+param entraTenantId = 'ef2b695d-55b4-4f36-af8e-f34b7d78f790'
+param entraClientId = 'f63b2e89-ef8c-4a59-9692-5e0adbce6e8a'
+param entraIdentityEnv = [
+  { name: 'Entra__UserNames__43d6c082-4b88-488c-acfc-7de7d519baab', value: 'alice' }
+  { name: 'Entra__UserNames__bb3e3579-54fa-4c63-9ffc-39746b2dc182', value: 'mallory' }
+  { name: 'Entra__GroupNames__6172c593-9f16-4029-8b6d-460e455215d8', value: 'hr' }
+]
 // Pass the password at deploy time:
 //   az deployment sub create ... --parameters main.dev.bicepparam sqlAdminPassword=<value>
 param sqlAdminPassword = ''
