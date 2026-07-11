@@ -10,7 +10,7 @@ param sqlAdminLogin = 'knowvaultadmin'
 // bills while idle; tear down between sessions regardless.
 param searchSku = 'free'
 param serviceBusSku = 'Basic'
-param imageTag = 'v2'
+param imageTag = 'v3'
 
 // Entra ID sign-in (knowvault-chat app registration) with demo identity
 // mappings so existing index ACLs (user:alice / group:hr) keep working.
