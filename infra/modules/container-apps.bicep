@@ -71,7 +71,8 @@ resource query 'Microsoft.App/containerApps@2024-03-01' = {
           ])
         }
       ]
-      scale: { minReplicas: 0, maxReplicas: 2 }
+      // One warm replica: a cold start exceeds Answer's 30s resilience timeout.
+      scale: { minReplicas: 1, maxReplicas: 2 }
     }
   }
 }
@@ -100,7 +101,8 @@ resource answer 'Microsoft.App/containerApps@2024-03-01' = {
           ])
         }
       ]
-      scale: { minReplicas: 0, maxReplicas: 2 }
+      // One warm replica: the public front door should answer without cold-start stalls.
+      scale: { minReplicas: 1, maxReplicas: 2 }
     }
   }
 }
