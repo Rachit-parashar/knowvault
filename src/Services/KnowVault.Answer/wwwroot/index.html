@@ -37,8 +37,14 @@
   <h1>Know<span>Vault</span></h1>
   <div class="tag">
     Ask a question — answers come only from documents <i>you</i> can see, with citations.
-    &nbsp;Tenant <select id="tenant"><option>eval</option><option>demo</option></select>
-    &nbsp;User <select id="user"><option>reader</option><option>alice</option><option>mallory</option></select>
+    <span id="devIdentity">
+      &nbsp;Tenant <select id="tenant"><option>eval</option><option>demo</option></select>
+      &nbsp;User <select id="user"><option>reader</option><option>alice</option><option>mallory</option></select>
+    </span>
+    <span id="entraIdentity" style="display:none">
+      &nbsp;<button id="signin" type="button" style="padding:2px 10px">Sign in</button>
+      <b id="whoami"></b>
+    </span>
   </div>
   <div id="log"></div>
   <form id="form">
@@ -52,6 +58,62 @@ const log = document.getElementById("log");
 const form = document.getElementById("form");
 const input = document.getElementById("question");
 const send = document.getElementById("send");
+
+// Entra ID sign-in when the server is configured for it; dev dropdowns otherwise.
+let entra = null, msalApp = null, account = null;
+(async () => {
+  try {
+    const cfg = await (await fetch("/api/config")).json();
+    if (!cfg.clientId) return;
+    entra = cfg;
+    document.getElementById("devIdentity").style.display = "none";
+    document.getElementById("entraIdentity").style.display = "";
+    await new Promise((ok, err) => {
+      const s = document.createElement("script");
+      s.src = "https://alcdn.msauth.net/browser/3.26.1/js/msal-browser.min.js";
+      s.onload = ok; s.onerror = err; document.head.appendChild(s);
+    });
+    msalApp = new msal.PublicClientApplication({
+      auth: {
+        clientId: cfg.clientId,
+        authority: `https://login.microsoftonline.com/${cfg.tenantId}`,
+        redirectUri: window.location.origin + "/"
+      },
+      cache: { cacheLocation: "sessionStorage" }
+    });
+    await msalApp.initialize();
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length) setAccount(accounts[0]);
+    document.getElementById("signin").addEventListener("click", async () => {
+      if (account) { await msalApp.logoutPopup({ account }); setAccount(null); return; }
+      const result = await msalApp.loginPopup({ scopes: [entra.scope] });
+      setAccount(result.account);
+    });
+  } catch (e) { console.error("auth init failed", e); }
+})();
+
+function setAccount(a) {
+  account = a;
+  document.getElementById("whoami").textContent = a ? a.username : "";
+  document.getElementById("signin").textContent = a ? "Sign out" : "Sign in";
+}
+
+async function identityHeaders() {
+  if (!entra) {
+    return {
+      "X-Dev-Tenant": document.getElementById("tenant").value,
+      "X-Dev-User": document.getElementById("user").value
+    };
+  }
+  if (!account) throw new Error("Please sign in first.");
+  let token;
+  try {
+    token = (await msalApp.acquireTokenSilent({ scopes: [entra.scope], account })).accessToken;
+  } catch {
+    token = (await msalApp.acquireTokenPopup({ scopes: [entra.scope] })).accessToken;
+  }
+  return { "Authorization": "Bearer " + token };
+}
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -74,11 +136,7 @@ form.addEventListener("submit", async (e) => {
   try {
     const res = await fetch("/api/answer", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Dev-Tenant": document.getElementById("tenant").value,
-        "X-Dev-User": document.getElementById("user").value
-      },
+      headers: { "Content-Type": "application/json", ...(await identityHeaders()) },
       body: JSON.stringify({ question })
     });
     if (!res.ok) throw new Error(await res.text());

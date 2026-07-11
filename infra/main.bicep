@@ -31,6 +31,14 @@ param deployApps bool = false
 @description('Image tag the container apps run.')
 param imageTag string = 'v1'
 
+@description('Entra ID sign-in configuration for the deployed apps; empty disables JWT auth.')
+param entraTenantId string = ''
+param entraClientId string = ''
+param entraIdentityEnv array = []
+
+@description('Existing OpenAI endpoint for app deploys when the openai module is skipped (Azure error 715-123420 flags even idempotent re-PUTs of young accounts).')
+param openAiEndpointOverride string = ''
+
 var baseName = 'knowvault-${environmentName}'
 var tags = {
   project: 'knowvault'
@@ -190,7 +198,7 @@ module eventGrid 'modules/eventgrid.bicep' = {
   }
 }
 
-module containerApps 'modules/container-apps.bicep' = if (deployApps && deployOpenAi) {
+module containerApps 'modules/container-apps.bicep' = if (deployApps && (deployOpenAi || !empty(openAiEndpointOverride))) {
   scope: rg
   name: 'container-apps'
   params: {
@@ -201,18 +209,21 @@ module containerApps 'modules/container-apps.bicep' = if (deployApps && deployOp
     identityId: identity.outputs.identityId
     identityClientId: identity.outputs.clientId
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
-    openAiEndpoint: openai!.outputs.endpoint
+    openAiEndpoint: !empty(openAiEndpointOverride) ? openAiEndpointOverride : openai!.outputs.endpoint
     searchEndpoint: search.outputs.searchEndpoint
     cosmosEndpoint: cosmos.outputs.accountEndpoint
     docIntelligenceEndpoint: docIntelligence.outputs.endpoint
     storageAccountName: storage.outputs.accountName
     serviceBusNamespace: serviceBus.outputs.namespaceName
     imageTag: imageTag
+    entraTenantId: entraTenantId
+    entraClientId: entraClientId
+    entraIdentityEnv: entraIdentityEnv
   }
 }
 
 output resourceGroupName string = rg.name
-output answerUrl string = (deployApps && deployOpenAi) ? containerApps!.outputs.answerUrl : ''
+output answerUrl string = (deployApps && (deployOpenAi || !empty(openAiEndpointOverride))) ? containerApps!.outputs.answerUrl : ''
 output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
 output containerRegistryLoginServer string = registry.outputs.loginServer
 output appInsightsConnectionString string = monitoring.outputs.appInsightsConnectionString
