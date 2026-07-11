@@ -8,6 +8,7 @@ using KnowVault.Query.Retrieval;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Azure.Cosmos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,16 @@ if (!string.IsNullOrEmpty(searchEndpoint) && !string.IsNullOrEmpty(openAiEndpoin
     builder.Services.AddSingleton<DevUserDirectory>();
     builder.Services.AddSingleton<EntraIdentity>();
     builder.Services.AddSingleton<HybridRetriever>();
+
+    var cosmosEndpoint = builder.Configuration["Azure:Cosmos:Endpoint"];
+    if (!string.IsNullOrEmpty(cosmosEndpoint))
+    {
+        builder.Services.AddSingleton(new CosmosClient(cosmosEndpoint, credential, new CosmosClientOptions
+        {
+            SerializerOptions = new CosmosSerializationOptions { PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase },
+        }));
+        builder.Services.AddSingleton<NeighborExpander>();
+    }
 }
 
 // Entra ID (JWT) validation when configured. AllowDevHeaders keeps the
@@ -97,7 +108,17 @@ app.MapPost("/api/query", async Task<Results<Ok<QueryResponse>, BadRequest<strin
         return TypedResults.BadRequest("A non-empty question is required.");
     }
 
-    return TypedResults.Ok(await retriever.RetrieveAsync(principal, request, cancellationToken));
+    var response = await retriever.RetrieveAsync(principal, request, cancellationToken);
+
+    // Context expansion around the best hit, when Cosmos is configured.
+    var expander = http.RequestServices.GetService<NeighborExpander>();
+    if (expander is not null)
+    {
+        response = new QueryResponse(
+            await expander.ExpandTopHitAsync(principal.TenantId, response.Chunks, cancellationToken));
+    }
+
+    return TypedResults.Ok(response);
 });
 
 app.Run();
