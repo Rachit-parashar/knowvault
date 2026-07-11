@@ -26,8 +26,47 @@ public sealed partial class GroundedAnswerer(
     private readonly ChatClient _chat =
         openAiClient.GetChatClient(configuration["Azure:OpenAI:GenerationDeployment"] ?? "gpt-5-mini");
 
+    /// <summary>
+    /// Follow-up questions retrieve poorly verbatim ("what about the premium
+    /// tier?"), so with history present the question is rewritten standalone
+    /// before retrieval. Skipped entirely on first turns (plan §6 step 1).
+    /// </summary>
+    public async Task<string> RewriteQuestionAsync(
+        string question, IReadOnlyList<ChatTurn>? history, CancellationToken cancellationToken)
+    {
+        if (history is not { Count: > 0 })
+        {
+            return question;
+        }
+
+        var transcript = new StringBuilder();
+        foreach (var turn in history.TakeLast(3))
+        {
+            transcript.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"User: {turn.Question}");
+            transcript.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Assistant: {turn.Answer}");
+        }
+
+        List<ChatMessage> messages =
+        [
+            new SystemChatMessage("""
+                Rewrite the user's latest question as a single fully self-contained question:
+                resolve pronouns and references using the conversation, expand acronyms the
+                conversation defines, and change nothing else. Reply with ONLY the rewritten question.
+                """),
+            new UserChatMessage($"""
+                Conversation:
+                {transcript}
+                Latest question: {question}
+                """),
+        ];
+
+        var completion = await _chat.CompleteChatAsync(messages, cancellationToken: cancellationToken);
+        var rewritten = completion.Value.Content[0].Text.Trim();
+        return rewritten.Length is > 0 and < 500 ? rewritten : question;
+    }
+
     public async Task<(IReadOnlyList<AnswerSource> Sources, IReadOnlyList<RetrievedChunk> Chunks)> RetrieveSourcesAsync(
-        string tenantId, string userId, string? bearerToken, AskRequest request, CancellationToken cancellationToken)
+        string tenantId, string userId, string? bearerToken, string searchQuestion, CancellationToken cancellationToken)
     {
         using var query = httpClientFactory.CreateClient("query");
 
@@ -35,7 +74,7 @@ public sealed partial class GroundedAnswerer(
         // the original bearer token when signed in (plan §5b), dev headers otherwise.
         using var queryRequest = new HttpRequestMessage(HttpMethod.Post, "/api/query")
         {
-            Content = JsonContent.Create(new QueryRequest(request.Question)),
+            Content = JsonContent.Create(new QueryRequest(searchQuestion)),
         };
         if (bearerToken is not null)
         {
@@ -64,6 +103,7 @@ public sealed partial class GroundedAnswerer(
     public async IAsyncEnumerable<string> StreamAnswerAsync(
         string tenantId,
         string question,
+        IReadOnlyList<ChatTurn>? history,
         IReadOnlyList<RetrievedChunk> chunks,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -87,12 +127,21 @@ public sealed partial class GroundedAnswerer(
                 - If the sources do not contain the answer, reply exactly: "{RefusalLine}"
                 - Be concise and factual.
                 """),
-            new UserChatMessage($"""
-                Sources:
-                {context}
-                Question: {question}
-                """),
         ];
+
+        // Recent turns give the model conversational continuity; grounding
+        // still comes exclusively from the sources in the final message.
+        foreach (var turn in (history ?? []).TakeLast(3))
+        {
+            messages.Add(new UserChatMessage(turn.Question));
+            messages.Add(new AssistantChatMessage(turn.Answer));
+        }
+
+        messages.Add(new UserChatMessage($"""
+            Sources:
+            {context}
+            Question: {question}
+            """));
 
         await foreach (var update in _chat.CompleteChatStreamingAsync(messages, cancellationToken: cancellationToken))
         {

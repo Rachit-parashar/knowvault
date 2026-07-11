@@ -51,6 +51,7 @@
     <div class="row">
       <input id="question" type="text" placeholder="e.g. Does Container Apps support scaling to zero?" autocomplete="off" autofocus>
       <button id="send" type="submit">Ask</button>
+      <button id="newchat" type="button" title="Clear the conversation" style="background:#2a3550;color:var(--text)">New</button>
     </div>
   </form>
 <script>
@@ -58,6 +59,10 @@ const log = document.getElementById("log");
 const form = document.getElementById("form");
 const input = document.getElementById("question");
 const send = document.getElementById("send");
+
+// Conversation memory: completed turns are sent as context so follow-up
+// questions ("what about the premium tier?") retrieve and answer correctly.
+let history = [];
 
 // Entra ID sign-in when the server is configured for it; dev dropdowns otherwise.
 let entra = null, msalApp = null, account = null;
@@ -153,7 +158,7 @@ form.addEventListener("submit", async (e) => {
     const res = await fetch("/api/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await identityHeaders()) },
-      body: JSON.stringify({ question })
+      body: JSON.stringify({ question, history: history.slice(-6) })
     });
     if (!res.ok) throw new Error(await res.text());
 
@@ -182,12 +187,19 @@ form.addEventListener("submit", async (e) => {
         }
       }
     }
+    if (text) history.push({ question, answer: text });
   } catch (err) {
     answerEl.textContent = "Something went wrong: " + err.message;
   } finally {
     send.disabled = false;
     input.focus();
   }
+});
+
+document.getElementById("newchat").addEventListener("click", () => {
+  history = [];
+  log.innerHTML = "";
+  input.focus();
 });
 
 function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
