@@ -2,6 +2,9 @@ param baseName string
 param location string
 param tags object
 
+@description('Principal of the shared app identity; grants Cosmos data-plane access when set.')
+param appPrincipalId string = ''
+
 resource account 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: 'cosmos-${baseName}-${uniqueString(resourceGroup().id)}'
   location: location
@@ -47,6 +50,16 @@ resource chunks 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2
         includedPaths: [{ path: '/*' }]
       }
     }
+  }
+}
+
+resource appDataRole 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(appPrincipalId)) {
+  parent: account
+  name: guid(account.id, appPrincipalId, 'data-contributor')
+  properties: {
+    roleDefinitionId: '${account.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
+    principalId: appPrincipalId
+    scope: account.id
   }
 }
 
