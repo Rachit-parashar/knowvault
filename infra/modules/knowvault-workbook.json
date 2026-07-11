@@ -1,0 +1,130 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "## KnowVault — Cost & Quality\nPer-answer usage from the ledger (tokens, cost, latency), plus service health. Data source: Application Insights."
+      },
+      "name": "title"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "d1a1b2c3-0000-4000-8000-000000000001",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": { "durationMs": 86400000 },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 604800000 },
+                { "durationMs": 2592000000 }
+              ]
+            }
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "params"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message startswith \"Usage: tenant\"\n| parse message with * \"tenant \" tenant \" prompt \" prompt:long \" + completion \" completion:long \" tokens = $\" cost:real \" in \" durationMs:real \"ms\"\n| summarize Answers = count(), ['Total cost (USD)'] = round(sum(cost), 4), ['Avg cost / answer'] = round(avg(cost), 6), ['Prompt tokens'] = sum(prompt), ['Completion tokens'] = sum(completion), ['Latency p95 (ms)'] = round(percentile(durationMs, 95), 0)",
+        "size": 3,
+        "title": "Totals for the selected period",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "kpis"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message startswith \"Usage: tenant\"\n| parse message with * \"tenant \" tenant \" prompt \" prompt:long \" + completion \" completion:long \" tokens = $\" cost:real \" in \" durationMs:real \"ms\"\n| summarize ['Cost (USD)'] = sum(cost) by bin(timestamp, 1h)\n| render timechart",
+        "size": 1,
+        "title": "Answer cost over time (USD)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "cost-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message startswith \"Usage: tenant\"\n| parse message with * \"tenant \" tenant \" prompt \" prompt:long \" + completion \" completion:long \" tokens = $\" cost:real \" in \" durationMs:real \"ms\"\n| summarize Tokens = sum(prompt + completion) by tenant, bin(timestamp, 1h)\n| render timechart",
+        "size": 1,
+        "title": "Tokens by tenant",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "tokens-by-tenant"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message startswith \"Usage: tenant\"\n| parse message with * \"tenant \" tenant \" prompt \" prompt:long \" + completion \" completion:long \" tokens = $\" cost:real \" in \" durationMs:real \"ms\"\n| summarize ['p50 (ms)'] = percentile(durationMs, 50), ['p95 (ms)'] = percentile(durationMs, 95) by bin(timestamp, 1h)\n| render timechart",
+        "size": 1,
+        "title": "Answer latency p50 / p95 (plan alert threshold: 8000ms p95)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "latency"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| summarize Requests = count(), Failed = countif(success == false) by cloud_RoleName, bin(timestamp, 1h)\n| render timechart",
+        "size": 1,
+        "title": "Requests by service (with failures)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "requests-by-service"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message startswith \"Usage: tenant\"\n| parse message with * \"tenant \" tenant \" prompt \" prompt:long \" + completion \" completion:long \" tokens = $\" cost:real \" in \" durationMs:real \"ms\"\n| project timestamp, tenant, prompt, completion, ['cost (USD)'] = cost, ['duration (ms)'] = durationMs\n| top 50 by timestamp desc",
+        "size": 0,
+        "title": "Recent answers (usage ledger)",
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "visualization": "table"
+      },
+      "name": "ledger"
+    }
+  ],
+  "styleSettings": {},
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

@@ -62,6 +62,16 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
+module workbook 'modules/workbook.bicep' = {
+  scope: rg
+  name: 'workbook'
+  params: {
+    location: location
+    tags: tags
+    appInsightsId: monitoring.outputs.appInsightsId
+  }
+}
+
 module keyVault 'modules/keyvault.bicep' = {
   scope: rg
   name: 'keyvault'
