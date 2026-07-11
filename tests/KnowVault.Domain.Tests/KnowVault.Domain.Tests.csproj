@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Shared\KnowVault.Domain\KnowVault.Domain.csproj" />
     <ProjectReference Include="..\..\src\Shared\KnowVault.Contracts\KnowVault.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Services\KnowVault.Connector\KnowVault.Connector.csproj" />
   </ItemGroup>
 
 </Project>

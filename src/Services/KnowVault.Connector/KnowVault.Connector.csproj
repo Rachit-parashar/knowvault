@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Azure.Messaging.ServiceBus" Version="13.4.6" />
     <PackageReference Include="Aspire.Azure.Storage.Blobs" Version="13.4.6" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.75.0.4192" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
   </ItemGroup>
 
