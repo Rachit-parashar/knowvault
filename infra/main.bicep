@@ -25,6 +25,12 @@ param serviceBusSku string = 'Basic'
 @description('Azure OpenAI can be blocked on brand-new subscriptions (error 715-123420, clears within ~a day). Disable to deploy everything else.')
 param deployOpenAi bool = true
 
+@description('Deploy the KnowVault services as container apps. Requires images in ACR (dotnet publish /t:PublishContainer) and deployOpenAi.')
+param deployApps bool = false
+
+@description('Image tag the container apps run.')
+param imageTag string = 'v1'
+
 var baseName = 'knowvault-${environmentName}'
 var tags = {
   project: 'knowvault'
@@ -123,6 +129,24 @@ module search 'modules/search.bicep' = {
   }
 }
 
+module identity 'modules/identity.bicep' = {
+  scope: rg
+  name: 'identity'
+  params: {
+    baseName: baseName
+    location: location
+    tags: tags
+  }
+}
+
+module roles 'modules/roles.bicep' = {
+  scope: rg
+  name: 'roles'
+  params: {
+    principalId: identity.outputs.principalId
+  }
+}
+
 module cosmos 'modules/cosmos.bicep' = {
   scope: rg
   name: 'cosmos'
@@ -130,6 +154,7 @@ module cosmos 'modules/cosmos.bicep' = {
     baseName: baseName
     location: location
     tags: tags
+    appPrincipalId: identity.outputs.principalId
   }
 }
 
@@ -165,7 +190,29 @@ module eventGrid 'modules/eventgrid.bicep' = {
   }
 }
 
+module containerApps 'modules/container-apps.bicep' = if (deployApps && deployOpenAi) {
+  scope: rg
+  name: 'container-apps'
+  params: {
+    location: location
+    tags: tags
+    environmentId: containerAppsEnv.outputs.environmentId
+    registryServer: registry.outputs.loginServer
+    identityId: identity.outputs.identityId
+    identityClientId: identity.outputs.clientId
+    appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
+    openAiEndpoint: openai!.outputs.endpoint
+    searchEndpoint: search.outputs.searchEndpoint
+    cosmosEndpoint: cosmos.outputs.accountEndpoint
+    docIntelligenceEndpoint: docIntelligence.outputs.endpoint
+    storageAccountName: storage.outputs.accountName
+    serviceBusNamespace: serviceBus.outputs.namespaceName
+    imageTag: imageTag
+  }
+}
+
 output resourceGroupName string = rg.name
+output answerUrl string = (deployApps && deployOpenAi) ? containerApps!.outputs.answerUrl : ''
 output containerAppsEnvironmentId string = containerAppsEnv.outputs.environmentId
 output containerRegistryLoginServer string = registry.outputs.loginServer
 output appInsightsConnectionString string = monitoring.outputs.appInsightsConnectionString
