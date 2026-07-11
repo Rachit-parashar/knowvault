@@ -18,6 +18,23 @@ if (!string.IsNullOrEmpty(inbox))
     builder.Services.AddSingleton<ISourceConnector>(new LocalFolderConnector(inbox));
 }
 
+// Google Drive connector: a service account shared into the folder as Viewer.
+// Key from a file path (local dev, .secrets/ is gitignored) or inline JSON
+// (cloud: Key Vault / container secret).
+var driveFolderId = builder.Configuration["Connector:GoogleDrive:FolderId"];
+var driveKeyPath = builder.Configuration["Connector:GoogleDrive:ServiceAccountKeyPath"];
+var driveKeyJson = builder.Configuration["Connector:GoogleDrive:ServiceAccountJson"]
+    ?? (!string.IsNullOrEmpty(driveKeyPath) && File.Exists(driveKeyPath) ? File.ReadAllText(driveKeyPath) : null);
+if (!string.IsNullOrEmpty(driveFolderId) && !string.IsNullOrEmpty(driveKeyJson))
+{
+    builder.Services.AddSingleton<ISourceConnector>(sp => new GoogleDriveConnector(
+        builder.Configuration["Connector:GoogleDrive:Tenant"] ?? "gdrive",
+        driveFolderId,
+        driveKeyJson,
+        builder.Configuration,
+        sp.GetRequiredService<ILogger<GoogleDriveConnector>>()));
+}
+
 builder.Services.AddHostedService<SyncEngine>();
 
 var host = builder.Build();

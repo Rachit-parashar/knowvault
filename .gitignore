@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 # Local connector inbox (synced test documents)
 connector-inbox/
 
+
+# Local credential files (service account keys etc.)
+.secrets/
