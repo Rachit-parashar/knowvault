@@ -68,11 +68,22 @@ let entra = null, msalApp = null, account = null;
     entra = cfg;
     document.getElementById("devIdentity").style.display = "none";
     document.getElementById("entraIdentity").style.display = "";
-    await new Promise((ok, err) => {
-      const s = document.createElement("script");
-      s.src = "https://alcdn.msauth.net/browser/3.26.1/js/msal-browser.min.js";
-      s.onload = ok; s.onerror = err; document.head.appendChild(s);
-    });
+    // MSAL v3 is not on Microsoft's old alcdn host; load from public CDNs.
+    const cdns = [
+      "https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.26.1/lib/msal-browser.min.js",
+      "https://unpkg.com/@azure/msal-browser@3.26.1/lib/msal-browser.min.js"
+    ];
+    let loaded = false;
+    for (const src of cdns) {
+      try {
+        await new Promise((ok, err) => {
+          const s = document.createElement("script");
+          s.src = src; s.onload = ok; s.onerror = err; document.head.appendChild(s);
+        });
+        loaded = true; break;
+      } catch { /* try next CDN */ }
+    }
+    if (!loaded) throw new Error("could not load the sign-in library");
     msalApp = new msal.PublicClientApplication({
       auth: {
         clientId: cfg.clientId,
@@ -85,11 +96,16 @@ let entra = null, msalApp = null, account = null;
     const accounts = msalApp.getAllAccounts();
     if (accounts.length) setAccount(accounts[0]);
     document.getElementById("signin").addEventListener("click", async () => {
-      if (account) { await msalApp.logoutPopup({ account }); setAccount(null); return; }
-      const result = await msalApp.loginPopup({ scopes: [entra.scope] });
-      setAccount(result.account);
+      try {
+        if (account) { await msalApp.logoutPopup({ account }); setAccount(null); return; }
+        const result = await msalApp.loginPopup({ scopes: [entra.scope] });
+        setAccount(result.account);
+      } catch (e) { alert("Sign-in failed: " + (e.message || e)); }
     });
-  } catch (e) { console.error("auth init failed", e); }
+  } catch (e) {
+    console.error("auth init failed", e);
+    document.getElementById("whoami").textContent = "(sign-in unavailable: " + (e.message || "script load failed") + ")";
+  }
 })();
 
 function setAccount(a) {
