@@ -75,7 +75,8 @@ Seven services in one solution ([ADR-003](docs/adr/ADR-003-monorepo.md) — a mo
 | `Query` | Hybrid BM25 + vector retrieval (RRF) with the mandatory security-trimming filter | Deployed |
 | `Answer` | Grounded prompt, SSE token streaming, `[n]` citations, refusal contract, usage metrics; serves the chat UI | Deployed (public) |
 | `Eval` | Golden-question harness: seeding through the real pipeline, LLM judge, security checks, reports | Local (needs repo fixtures) |
-| `Gateway` | YARP BFF / APIM front — placeholder | Skeleton |
+
+(An APIM/gateway front is on the roadmap — Container Apps ingress does the routing today.)
 
 ## The security model (the interesting part)
 
@@ -141,6 +142,5 @@ Remaining for v1 polish: real Entra ID sign-in (dev test-user directory today), 
 ## Docs
 
 - [Architecture Decision Records](docs/adr/) — compute, ACL strategy, monorepo, model pinning
-- [Knowledge transfer / operations runbook](docs/KNOWLEDGE-TRANSFER.md) — access inventory, deploy loop, 13 hard-won gotchas
-- [Project documentation](docs/KnowVault-Project-Documentation.docx) — full plain-language walkthrough
-- [Original build plan](docs/build-plan.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
+- [Original build plan](docs/build-plan.md) — the design this was executed from
+- [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)

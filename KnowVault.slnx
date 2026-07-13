@@ -8,7 +8,6 @@
     <Project Path="src/Services/KnowVault.Answer/KnowVault.Answer.csproj" />
     <Project Path="src/Services/KnowVault.Connector/KnowVault.Connector.csproj" />
     <Project Path="src/Services/KnowVault.Eval/KnowVault.Eval.csproj" />
-    <Project Path="src/Services/KnowVault.Gateway/KnowVault.Gateway.csproj" />
     <Project Path="src/Services/KnowVault.Ingestion/KnowVault.Ingestion.csproj" />
     <Project Path="src/Services/KnowVault.Query/KnowVault.Query.csproj" />
   </Folder>

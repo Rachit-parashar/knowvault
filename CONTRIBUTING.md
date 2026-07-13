@@ -18,8 +18,10 @@ This is a personal portfolio project, but issues and pull requests are welcome.
 
 ## Getting started
 
-Prereqs and the local dev loop are in [docs/KNOWLEDGE-TRANSFER.md](docs/KNOWLEDGE-TRANSFER.md).
-Short version: .NET 10 SDK + Docker Desktop, then `dotnet run --project src/KnowVault.AppHost`.
+Prereqs: .NET 10 SDK + Docker Desktop (the local storage/messaging emulators are containers).
+Then `dotnet run --project src/KnowVault.AppHost` — the Aspire dashboard link prints in the console.
+Azure-backed features (search, embeddings) additionally need `az login` and your own deployed
+environment (`infra/` + `scripts/deploy-dev.ps1`).
 
 ## Commit style
 

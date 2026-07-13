@@ -23,12 +23,6 @@ var admin = builder.AddProject<Projects.KnowVault_Admin>("admin")
     .WaitFor(uploads)
     .WaitFor(messaging);
 
-var gateway = builder.AddProject<Projects.KnowVault_Gateway>("gateway")
-    .WithExternalHttpEndpoints()
-    .WithReference(query)
-    .WithReference(answer)
-    .WithReference(admin);
-
 // Ingestion path
 builder.AddProject<Projects.KnowVault_Connector>("connector")
     .WithReference(uploads)

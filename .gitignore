@@ -488,3 +488,7 @@ connector-inbox/
 
 # Local credential files (service account keys etc.)
 .secrets/
+
+# Personal/internal docs stay local (see D:\knowvault-private)
+docs/KnowVault-Project-Documentation.docx
+docs/KNOWLEDGE-TRANSFER.md

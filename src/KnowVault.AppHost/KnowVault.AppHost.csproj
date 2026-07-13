@@ -1,11 +1,10 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+﻿<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
 
   <ItemGroup>
     <ProjectReference Include="..\Services\KnowVault.Admin\KnowVault.Admin.csproj" />
     <ProjectReference Include="..\Services\KnowVault.Query\KnowVault.Query.csproj" />
     <ProjectReference Include="..\Services\KnowVault.Answer\KnowVault.Answer.csproj" />
     <ProjectReference Include="..\Services\KnowVault.Eval\KnowVault.Eval.csproj" />
-    <ProjectReference Include="..\Services\KnowVault.Gateway\KnowVault.Gateway.csproj" />
     <ProjectReference Include="..\Services\KnowVault.Connector\KnowVault.Connector.csproj" />
     <ProjectReference Include="..\Services\KnowVault.Ingestion\KnowVault.Ingestion.csproj" />
   </ItemGroup>
@@ -24,3 +23,4 @@
   </PropertyGroup>
 
 </Project>
+
