@@ -1,8 +1,16 @@
 # KnowVault
 
+[![PR checks](https://github.com/Rachit-parashar/knowvault/actions/workflows/pr.yml/badge.svg)](https://github.com/Rachit-parashar/knowvault/actions/workflows/pr.yml)
+[![Deploy](https://github.com/Rachit-parashar/knowvault/actions/workflows/main.yml/badge.svg)](https://github.com/Rachit-parashar/knowvault/actions/workflows/main.yml)
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)
+![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
 **A multi-tenant, permission-aware RAG platform on Azure.** Organizations connect document sources; content is chunked, embedded, and indexed with permission metadata; users ask questions in a chat UI and get **streamed, cited answers drawn only from documents they are allowed to see**.
 
 Built with .NET 10 / Aspire, seven microservices, and eleven Azure services — deployed to Azure Container Apps with managed identity everywhere and **zero connection strings or keys in the entire system**.
+
+![KnowVault chat: a signed-in user asking a question and receiving a cited, grounded answer](docs/images/chat.png)
 
 ## The demo that matters
 
@@ -133,5 +141,6 @@ Remaining for v1 polish: real Entra ID sign-in (dev test-user directory today), 
 ## Docs
 
 - [Architecture Decision Records](docs/adr/) — compute, ACL strategy, monorepo, model pinning
+- [Knowledge transfer / operations runbook](docs/KNOWLEDGE-TRANSFER.md) — access inventory, deploy loop, 13 hard-won gotchas
 - [Project documentation](docs/KnowVault-Project-Documentation.docx) — full plain-language walkthrough
-- [Original build plan](docs/build-plan.md)
+- [Original build plan](docs/build-plan.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
