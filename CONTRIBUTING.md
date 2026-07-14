@@ -25,5 +25,4 @@ environment (`infra/` + `scripts/deploy-dev.ps1`).
 
 ## Commit style
 
-Imperative subject, body explains *why* and records anything learned the hard way — the git
-history doubles as the project's incident log.
+Imperative subject; the body states what changed and why.

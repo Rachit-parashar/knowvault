@@ -123,13 +123,13 @@ Designed to run on a free-trial subscription: AI Search free tier, serverless SQ
 
 Every service ships OpenTelemetry: the Aspire dashboard locally, Application Insights in Azure (traces, dependencies, custom `knowvault.*` metrics). One distributed trace follows a question from the chat UI through Query, AI Search, and gpt-5-mini token streaming.
 
-## Production lessons (learned live, encoded in the repo)
+## Operational hardening
 
-- **Models retire under you** — the originally-planned gpt-4o-mini was retired mid-project; all model names/versions are now pinned Bicep parameters ([ADR-004](docs/adr/ADR-004-model-selection.md)).
-- **Popular regions reject new subscriptions** — eastus2 refused SQL/Search provisioning; region is a parameter, capacity checked programmatically.
-- **Soft-deleted resources block redeploys** — deleted OpenAI accounts and Key Vaults reserve their names for days; the teardown script purges them.
-- **RBAC propagation races container provisioning** — an app whose first image pull beat the `AcrPull` grant stays `Failed` on identical re-deploys; the fix (delete, then redeploy) was bisected with probe apps.
-- **Silent-failure watchers are worthless** — every automated check here watches for failure signatures, not just success.
+- **Model versions are pinned** — model names and versions are Bicep parameters ([ADR-004](docs/adr/ADR-004-model-selection.md)), so a provider retiring a model is a one-line parameter change.
+- **Region and tiers are parameters** — the whole environment relocates or re-tiers by editing the param file; capacity and model availability are checked programmatically before placement.
+- **Teardown purges soft-deleted shadows** — deleted OpenAI accounts and Key Vaults reserve their names; `teardown-dev.ps1` purges them so redeploys always succeed.
+- **Deterministic recovery for failed provisioning** — container apps that fail first provisioning are deleted and redeployed; a probe-app bisection procedure isolates registry/identity/config causes.
+- **Failure-aware automation** — every CI check and watcher matches failure signatures explicitly, never success patterns alone.
 
 ## What I'd change at 10× scale
 
