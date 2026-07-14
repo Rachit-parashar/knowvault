@@ -12,6 +12,12 @@ param searchSku = 'free'
 param serviceBusSku = 'Basic'
 param imageTag = 'v4'
 
+// The OpenAI account exists and works but Azure's anti-abuse check (715-123420)
+// rejects even idempotent re-PUTs on this young subscription — deploys skip the
+// module and reference the live endpoint instead.
+param deployOpenAi = false
+param openAiEndpointOverride = 'https://oai-knowvault-dev-woaaq7havkzpg.openai.azure.com/'
+
 // Entra ID sign-in (knowvault-chat app registration) with demo identity
 // mappings so existing index ACLs (user:alice / group:hr) keep working.
 param entraTenantId = 'ef2b695d-55b4-4f36-af8e-f34b7d78f790'

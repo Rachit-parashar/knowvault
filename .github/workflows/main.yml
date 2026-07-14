@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Two pushes in quick succession must not deploy concurrently — ARM conflicts.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write # OIDC federated credentials to Azure — no publish-profile secrets
