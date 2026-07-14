@@ -142,5 +142,6 @@ Remaining for v1 polish: real Entra ID sign-in (dev test-user directory today), 
 ## Docs
 
 - [Architecture Decision Records](docs/adr/) — compute, ACL strategy, monorepo, model pinning
+- [Configuration reference](docs/CONFIGURATION.md) — every setting per service, the keyless connection-string model, the secret inventory
 - [Original build plan](docs/build-plan.md) — the design this was executed from
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
