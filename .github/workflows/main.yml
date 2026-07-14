@@ -3,6 +3,7 @@ name: Main
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Two pushes in quick succession must not deploy concurrently — ARM conflicts.
 concurrency:
